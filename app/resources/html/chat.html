@@ -1,314 +1,383 @@
-<!-- 查询演示页面，用于体验普通问答与流式响应。 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>掌柜智库知识库</title>
-  <style>
-    :root{
-      --bg:#f3f5f7;
-      --panel:#ffffff;
-      --text:#1f2d3d;
-      --muted:#7a869a;
-      --brand:#1aa7ff;
-      --brand2:#5b7cfa;
-      --bubble-user:#1aa7ff;
-      --bubble-bot:#ffffff;
-      --border:#e6e9ef;
-      --shadow:0 10px 30px rgba(31,45,61,.12);
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, Arial, sans-serif;
-      background: radial-gradient(1200px 600px at 20% 0%, rgba(26,167,255,.18), transparent 60%),
-                  radial-gradient(1000px 500px at 90% 10%, rgba(91,124,250,.18), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-      height:100vh;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      padding:18px;
-    }
-    .app{
-      width:100%;
-      max-width:980px;
-      height:min(820px, 92vh);
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:16px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-    }
-    .topbar{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:14px 18px;
-      border-bottom:1px solid var(--border);
-      background:linear-gradient(90deg, rgba(26,167,255,.10), rgba(91,124,250,.10));
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:240px;
-    }
-    .logo{
-      width:36px;height:36px;border-radius:10px;
-      background:linear-gradient(135deg, var(--brand), var(--brand2));
-      box-shadow:0 8px 18px rgba(26,167,255,.25);
-    }
-    .title{
-      display:flex;
-      flex-direction:column;
-      line-height:1.1;
-    }
-    .title strong{font-size:14px}
-    .title span{font-size:12px;color:var(--muted);margin-top:3px}
-    .top-actions{
-      margin-left:auto;
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .pill{
-      font-size:12px;
-      color:var(--muted);
-      border:1px solid var(--border);
-      padding:6px 10px;
-      border-radius:999px;
-      background:#fff;
-    }
-    .btn{
-      border:none;
-      background:linear-gradient(135deg, var(--brand), var(--brand2));
-      color:#fff;
-      padding:8px 12px;
-      border-radius:10px;
-      font-size:12px;
-      cursor:pointer;
-    }
-    .btn:disabled{opacity:.6;cursor:not-allowed}
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="听书知识库：用对话检索有声书，获取简介、推荐、详情与收听建议。" />
+<title>听书知识库</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23472913'/%3E%3Cpath d='M9 8h14v16H9z' fill='%23e4e0cf'/%3E%3Cpath d='M9 8h14v4H9z' fill='%23c79a3e'/%3E%3Cpath d='M13 8h6v2h-6z' fill='%23525e1b'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js')</script>
+<style>
+  /* ============================================================
+     听书知识库 · 有向设计（tasteskill v2）
+     direction = the page is the object（把「卡片抽屉」当作页面本身）
+     类型：Zilla Slab（拉丁/数字）+ 中文衬线（标题）/ 中文黑体（正文）
+     色板：tobacco & olive —— 棕墨地色 + 骨白纸 + 赭黄卡口 + 橄榄重点色
+     ============================================================ */
+  :root{
+    --bg:#472913;              /* 地色：棕墨 */
+    --surface:#55321a;         /* 地色上一档：输入框等 */
+    --surface-deep:#3a2110;
+    --ink:#e4e0cf;             /* 地色上的字（骨白） */
+    --muted:#b39f84;           /* 地色上的次要文字 */
+    --accent:#525e1b;          /* 唯一重点色：橄榄 */
+    --accent-strong:#67721f;
+    --accent-ink:#e4e0cf;
+    --field-1:#c79a3e;         /* 卡口赭黄 */
+    --field-1-ink:#2b170a;
+    --paper:#e4e0cf;           /* 卡片＝纸 */
+    --paper-ink:#2b170a;
+    --paper-deep:#d5cdb2;
+    --paper-muted:rgba(43,23,10,.66);
 
-    .chat{
-      flex:1;
-      overflow:auto;
-      padding:16px 14px 10px;
-      background:linear-gradient(180deg, rgba(26,167,255,.05), transparent 40%),
-                 linear-gradient(0deg, rgba(91,124,250,.05), transparent 45%);
-    }
-    .dayline{
-      text-align:center;
-      color:var(--muted);
-      font-size:12px;
-      margin:6px 0 14px;
-    }
-    .msg{
-      display:flex;
-      gap:10px;
-      margin:10px 0;
-      align-items:flex-end;
-    }
-    .msg.user{justify-content:flex-end}
-    /* 关键：只让“消息内容容器”(排除头像)在 flex 中可伸缩，避免被压到“1 个字宽”导致竖排换行 */
-    .msg > div:not(.avatar){
-      flex:1;
-      min-width:0;
-    }
-    .msg.user > div:not(.avatar){
-      display:flex;
-      flex-direction:column;
-      align-items:flex-end;
-    }
-    .avatar{
-      width:34px;height:34px;border-radius:10px;
-      background:#e9eef7;
-      display:flex;align-items:center;justify-content:center;
-      font-size:14px;
-      color:#3b4a5a;
-      flex:0 0 auto;
-    }
-    .avatar.bot{background:linear-gradient(135deg, rgba(26,167,255,.18), rgba(91,124,250,.18))}
-    .bubble{
-      max-width:min(720px, 76%);
-      display:inline-block;
-      border-radius:14px;
-      padding:10px 12px;
-      border:1px solid var(--border);
-      background:var(--bubble-bot);
-      position:relative;
-      line-height:1.55;
-      font-size:14px;
-      white-space:pre-wrap;
-      overflow-wrap: break-word;
-    }
-    .msg.user .bubble{
-      background:var(--bubble-user);
-      color:#fff;
-      border-color:transparent;
-    }
-    .meta{
-      font-size:11px;
-      color:var(--muted);
-      margin-top:6px;
-    }
-    .msg.user .meta{color:rgba(255,255,255,.85)}
-    details.progress{
-      margin-top:8px;
-      border:1px dashed rgba(122,134,154,.45);
-      border-radius:12px;
-      padding:8px 10px;
-      background:rgba(122,134,154,.06);
-    }
-    details.progress summary{
-      cursor:pointer;
-      user-select:none;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .progress ul{margin:8px 0 0 18px;padding:0}
-    .progress li{margin:4px 0;font-size:12px;color:#56657a}
+    --font-display:"Zilla Slab","Songti SC","Noto Serif SC",Georgia,"SimSun",serif;
+    --font-text:"Zilla Slab",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
 
-    .answer-images{
-      margin-top:10px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .answer-images img{
-      display: block;
-      max-width: min(100%, 600px);
-      max-height: 600px;
-      width: auto;
-      height: auto;
-      border-radius:12px;
-      border:1px solid var(--border);
-      box-shadow:0 10px 24px rgba(31,45,61,.10);
-      background:#fff;
-    }
-    .answer-images a{
-      font-size:12px;
-      color:var(--muted);
-      text-decoration:none;
-      word-break:break-all;
-    }
+    --step-small:clamp(0.8125rem,0.79rem + 0.1vw,0.875rem);
+    --step-body:clamp(1.0625rem,1rem + 0.25vw,1.1875rem);
+    --step-lead:clamp(1.25rem,1.1rem + 0.7vw,1.625rem);
+    --step-display:clamp(2.75rem,9vw,7rem);
 
-    .typing{
-      display:inline-flex;gap:6px;align-items:center;
-    }
-    .dot{
-      width:7px;height:7px;border-radius:50%;
-      background:#9aa6b2;
-      animation:bounce 1.2s infinite ease-in-out;
-    }
-    .dot:nth-child(2){animation-delay:.15s}
-    .dot:nth-child(3){animation-delay:.3s}
-    @keyframes bounce{
-      0%,80%,100%{transform:translateY(0);opacity:.6}
-      40%{transform:translateY(-5px);opacity:1}
-    }
+    --margin:clamp(1rem,2.2vw,2rem);
+    --radius:0;
+    --ease-out:cubic-bezier(0.22,1,0.36,1);
+    --ease-in-out:cubic-bezier(0.76,0,0.24,1);
+    --t-press:140ms; --t-hover:180ms; --t-ui:240ms; --t-reveal:700ms;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-text);
+    font-size:var(--step-body);
+    line-height:1.5;
+    font-kerning:normal;
+    text-rendering:optimizeLegibility;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--field-1);color:var(--field-1-ink)}
+  :focus-visible{outline:2px solid var(--field-1);outline-offset:2px}
 
-    .composer{
-      border-top:1px solid var(--border);
-      padding:12px 14px;
-      display:flex;
-      gap:10px;
-      align-items:flex-end;
-      background:#fff;
+  .skip{position:absolute;left:-9999px}
+  .skip:focus{left:var(--margin);top:8px;z-index:5;background:var(--field-1);color:var(--field-1-ink);padding:8px 12px;font-size:var(--step-small)}
+
+  /* ---- 骨架 ---- */
+  .app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden} /* taste-skill-ignore: 100vh 仅作旧浏览器回退，紧随其后为 100dvh */
+  .wrap{width:100%;max-width:1120px;margin-inline:auto;padding-inline:var(--margin)}
+
+  /* ---- 顶部：朴素横条，无边框、无阴影 ---- */
+  .bar{display:flex;align-items:center;gap:clamp(12px,2vw,28px);padding-block:clamp(12px,1.8vw,18px)}
+  .wordmark{
+    font-family:var(--font-display);font-weight:600;
+    font-size:clamp(1.125rem,1rem + 0.6vw,1.4rem);
+    letter-spacing:-0.01em;line-height:1;
+    color:var(--ink);text-decoration:none;white-space:nowrap;
+  }
+  .bar__nav{margin-left:auto;display:flex;align-items:center;gap:clamp(10px,1.6vw,24px)}
+  .tlink{
+    font-size:var(--step-small);color:var(--muted);text-decoration:none;
+    background:none;border:0;padding:8px 2px;cursor:pointer;font-family:inherit;
+    transition:color var(--t-hover) ease;
+  }
+  .tlink:hover{color:var(--ink)}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:var(--step-small);color:var(--muted);cursor:pointer;user-select:none;padding-block:8px}
+  .switch input{appearance:none;width:38px;height:20px;background:var(--surface-deep);position:relative;cursor:pointer;margin:0;transition:background var(--t-hover) ease}
+  .switch input::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;background:var(--muted);transition:transform var(--t-ui) var(--ease-out),background var(--t-hover) ease}
+  .switch input:checked{background:var(--accent)}
+  .switch input:checked::after{transform:translateX(18px);background:var(--accent-ink)}
+  .status{font-size:var(--step-small);color:var(--muted);white-space:nowrap}
+  .status.is-ok{color:var(--field-1)}
+  .status.is-off{color:var(--ink)}
+
+  /* ---- 对话区＝抽屉 ---- */
+  .chat{flex:1;display:flex;flex-direction:column;overflow:auto;padding-block:clamp(20px,4vh,56px) clamp(20px,3vh,40px);scroll-behavior:smooth}
+
+  .dayline{font-size:var(--step-small);color:var(--muted);margin:0 0 clamp(18px,3vh,34px)}
+
+  /* 首屏＝一张「馆藏卡」，让 idea 在第一屏就可读 */
+  .opening{width:fit-content;max-width:100%;margin-block:auto}
+  .opening__tab{
+    display:block;width:fit-content;margin:0 16px 0 auto;
+    clip-path:polygon(12px 0,100% 0,100% 100%,0 100%);
+    background:var(--field-1);color:var(--field-1-ink);
+    font-family:var(--font-display);font-weight:600;font-size:var(--step-small);
+    padding:4px 20px 5px;
+  }
+  .opening__panel{background:var(--paper);color:var(--paper-ink);padding:clamp(26px,4vw,48px)}
+  .opening__title{
+    font-family:var(--font-display);font-weight:600;
+    font-size:var(--step-display);line-height:1.0;letter-spacing:-0.035em;
+    margin:0;width:fit-content;max-width:100%;text-wrap:balance;
+  }
+  .opening__note{margin:1em 0 0;max-width:34rem;color:var(--paper-muted);line-height:1.55;text-wrap:pretty}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:clamp(26px,4vh,44px)}
+  .chip{
+    font-family:inherit;font-size:var(--step-small);
+    background:var(--paper-deep);color:var(--paper-ink);border:0;border-radius:var(--radius);
+    padding:12px 16px;cursor:pointer;text-align:left;
+    transition:background var(--t-hover) ease,color var(--t-hover) ease,transform var(--t-press) var(--ease-out);
+  }
+  .chip:hover{background:var(--accent);color:var(--accent-ink)}
+  .chip:active{transform:scale(0.98)}
+
+  /* 每一问一答＝抽屉里抽出的一张卡 */
+  .turn{display:flex;flex-direction:column;margin:0 0 clamp(22px,3.4vh,38px)}
+  .turn--you{align-items:flex-end}
+  .turn--lib{align-items:flex-start}
+
+  .card{position:relative;max-width:min(100%,46rem);background:var(--paper);color:var(--paper-ink);border-radius:var(--radius)}
+  .card__tab{
+    display:inline-block;margin:12px 0 0 16px;
+    clip-path:polygon(9px 0,100% 0,calc(100% - 9px) 100%,0 100%);
+    background:var(--field-1);color:var(--field-1-ink);
+    font-family:var(--font-display);font-weight:600;
+    font-size:var(--step-small);letter-spacing:0.01em;
+    padding:3px 17px 4px;
+  }
+  .card__body{padding:10px 20px 18px}
+  .card__body > *:first-child{margin-top:0}
+  .card__body > *:last-child{margin-bottom:0}
+
+  .card--you{
+    background:var(--field-1);color:var(--field-1-ink);
+    max-width:min(100%,34rem);padding:14px 18px;
+  }
+  .card--you p{margin:0;white-space:pre-wrap;overflow-wrap:break-word}
+
+  .stamp{font-size:var(--step-small);color:var(--muted);margin:8px 0 0;padding-inline:2px}
+
+  /* 检索过程：状态用文字与方块，不用 emoji */
+  .steps{margin:16px 0 0}
+  .steps summary{
+    cursor:pointer;user-select:none;list-style:none;
+    font-size:var(--step-small);color:var(--paper-muted);
+    display:flex;align-items:center;gap:8px;
+  }
+  .steps summary::-webkit-details-marker{display:none}
+  .steps summary::before{content:"";width:8px;height:8px;background:var(--accent);flex:0 0 auto}
+  .steps[open] summary::before{background:var(--paper-ink)}
+  .steps__list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+  .steps__list li{position:relative;padding-left:20px;font-size:var(--step-small);color:var(--paper-muted)}
+  .steps__list li::before{content:"";position:absolute;left:0;top:0.4em;width:8px;height:8px;background:var(--accent)}
+  .steps__list li.is-run{color:var(--paper-ink)}
+  .steps__list li.is-run::before{background:var(--paper-ink)}
+  .steps__list li.is-pending::before{background:transparent}
+
+  /* 答案排版（Markdown） */
+  .answer-text{white-space:normal}
+  .answer-text p{margin:.5em 0;line-height:1.6;max-width:66ch;text-wrap:pretty}
+  .answer-text h1,.answer-text h2,.answer-text h3,.answer-text h4{
+    font-family:var(--font-display);font-weight:600;letter-spacing:-0.015em;
+    margin:1em 0 .35em;line-height:1.25;
+  }
+  .answer-text h1,.answer-text h2{font-size:var(--step-lead)}
+  .answer-text h3,.answer-text h4{font-size:var(--step-body)}
+  .answer-text ul,.answer-text ol{margin:.4em 0 .4em 1.15em;padding:0}
+  .answer-text li{margin:.24em 0;line-height:1.55}
+  .answer-text code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:.86em;background:var(--paper-deep);color:var(--paper-ink);
+    padding:1px 5px;border-radius:var(--radius);
+  }
+  .answer-text pre{background:var(--paper-deep);padding:14px 16px;overflow:auto;margin:.6em 0;border-radius:var(--radius)}
+  .answer-text pre code{background:none;color:var(--paper-ink);padding:0}
+  .answer-text blockquote{margin:.6em 0;padding:2px 0 2px 14px;border-left:4px solid var(--accent);color:var(--paper-muted)}
+  .answer-text table{border-collapse:collapse;margin:.6em 0;font-size:var(--step-small)}
+  .answer-text th,.answer-text td{border:1px solid rgba(43,23,10,.22);padding:6px 10px;text-align:left}
+  .answer-text th{font-family:var(--font-display)}
+  .answer-text a{color:var(--paper-ink);text-decoration:underline;text-underline-offset:.18em;text-decoration-thickness:.07em}
+  .answer-text strong{font-weight:600}
+  .answer-text hr{border:0;height:4px;background:var(--paper-deep);margin:1em 0}
+
+  .answer-images{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+  .answer-images img{display:block;width:auto;height:auto;max-width:min(100%,560px);max-height:560px;border-radius:var(--radius);background:var(--paper-deep)}
+  .answer-images a{font-size:var(--step-small);color:var(--paper-muted);text-decoration:none;overflow-wrap:anywhere}
+
+  .answer-failed{color:var(--paper-ink)}
+
+  /* ---- 输入区（停留在地色上） ---- */
+  .composer{padding-block:clamp(12px,2vh,20px) clamp(10px,1.6vh,16px);display:flex;gap:12px;align-items:flex-end}
+  textarea{
+    flex:1;resize:none;min-height:52px;max-height:180px;
+    padding:15px 16px;border:0;border-radius:var(--radius);
+    background:var(--surface);color:var(--ink);
+    font-family:inherit;font-size:var(--step-body);line-height:1.5;
+    outline:none;transition:background var(--t-hover) ease;
+  }
+  textarea::placeholder{color:var(--muted)}
+  textarea:focus{background:var(--surface-deep)}
+  .send{
+    flex:0 0 auto;height:52px;padding:0 26px;border:0;border-radius:var(--radius);
+    background:var(--accent);color:var(--accent-ink);
+    font-family:var(--font-display);font-weight:600;font-size:var(--step-body);
+    cursor:pointer;
+    transition:background var(--t-hover) ease,transform var(--t-press) var(--ease-out);
+  }
+  .send:hover{background:var(--accent-strong)}
+  .send:active{transform:scale(0.98)}
+  .send:disabled{opacity:.55;cursor:not-allowed}
+  .hint{padding-block:0 clamp(12px,2vh,18px);color:var(--muted);font-size:var(--step-small)}
+  .hint b{font-weight:600;color:var(--ink)}
+
+  /* ---- 历史会话侧栏：窄屏是抽屉，宽屏常驻 ---- */
+  .rail{
+    position:fixed;inset:0 auto 0 0;z-index:40;
+    width:min(84vw,300px);
+    display:flex;flex-direction:column;
+    background:#331b0c;   /* 比地色再深一档，抽屉边缘才立得住 */
+    padding-block:clamp(14px,2.2vh,22px);
+    transform:translateX(-101%);
+    transition:transform var(--t-ui) var(--ease-out);
+    overscroll-behavior:contain;
+  }
+  .rail.is-open{transform:none}
+  .scrim{
+    position:fixed;inset:0;z-index:35;background:rgba(24,12,4,.62);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity var(--t-ui) ease,visibility var(--t-ui);
+  }
+  .scrim.is-open{opacity:1;visibility:visible;pointer-events:auto}
+  .rail__head{display:flex;align-items:center;gap:12px;padding:0 clamp(14px,2vw,20px) 12px}
+  .rail__title{
+    margin:0 auto 0 0;font-family:var(--font-display);font-weight:600;
+    font-size:var(--step-lead);line-height:1.1;color:var(--ink);
+  }
+  .rail__list{list-style:none;margin:0;padding:0 10px 12px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px}
+  .rail__row{display:flex;align-items:stretch;position:relative}
+  .rail__item{
+    flex:1;text-align:left;background:none;border:0;border-radius:var(--radius);
+    color:var(--muted);font-family:inherit;font-size:var(--step-small);line-height:1.35;
+    padding:10px 12px;cursor:pointer;overflow-wrap:anywhere;
+    transition:background var(--t-hover) ease,color var(--t-hover) ease;
+  }
+  .rail__item:hover{background:var(--surface);color:var(--ink)}
+  .rail__row.is-current .rail__item{background:var(--paper);color:var(--paper-ink)}
+  .rail__item-title{display:block;font-size:clamp(0.9375rem,0.9rem + 0.2vw,1.0625rem);line-height:1.35;text-wrap:pretty}
+  .rail__meta{display:block;margin-top:4px;font-size:var(--step-small);opacity:.72}
+  .rail__del{
+    flex:0 0 auto;width:34px;background:none;border:0;border-radius:var(--radius);
+    color:var(--muted);font-family:inherit;font-size:var(--step-body);line-height:1;
+    cursor:pointer;opacity:0;transition:opacity var(--t-hover) ease,background var(--t-hover) ease,color var(--t-hover) ease;
+  }
+  .rail__row:hover .rail__del,.rail__del:focus-visible{opacity:1}
+  .rail__row.is-current .rail__del{color:var(--muted)}
+  .rail__del:hover{background:var(--field-1);color:var(--field-1-ink)}
+  /* 触屏没有 hover，删除按钮常显 */
+  @media (hover:none){ .rail__del{opacity:1} }
+  .rail__empty{padding:10px 12px;color:var(--muted);font-size:var(--step-small);line-height:1.5}
+  .rail__toggle{display:inline-flex}
+  @media (min-width:1080px){
+    .rail{transform:none}
+    .scrim{display:none}
+    .app{padding-left:300px}
+    .rail__toggle,.rail__close{display:none}
+  }
+
+  /* ---- 入场：一次，按阅读顺序错开 ---- */
+  @media (prefers-reduced-motion: no-preference){
+    .js [data-rise]{
+      opacity:0;transform:translateY(16px);
+      animation:rise var(--t-reveal) var(--ease-out) forwards;
+      animation-delay:calc(var(--i,0) * 80ms + 100ms);
     }
-    textarea{
-      flex:1;
-      resize:none;
-      min-height:44px;
-      max-height:140px;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      outline:none;
-      font-size:14px;
-      line-height:1.5;
-    }
-    textarea:focus{border-color:rgba(26,167,255,.6); box-shadow:0 0 0 3px rgba(26,167,255,.12)}
-    .send{
-      width:88px;
-      height:44px;
-      border:none;
-      border-radius:12px;
-      cursor:pointer;
-      font-size:14px;
-      color:#fff;
-      background:linear-gradient(135deg, var(--brand), var(--brand2));
-    }
-    .send:disabled{opacity:.6;cursor:not-allowed}
-    .hint{
-      padding:0 14px 12px;
-      color:var(--muted);
-      font-size:12px;
-      background:#fff;
-    }
-    .kbd{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      border:1px solid var(--border);
-      padding:1px 6px;
-      border-radius:6px;
-      background:#f7f9fc;
-      color:#3b4a5a;
-    }
-  </style>
+    .js .turn.is-new .card{animation:card-in 620ms var(--ease-out) both}
+  }
+  @keyframes rise{to{opacity:1;transform:none}}
+  @keyframes card-in{
+    from{opacity:0;transform:translateY(14px);clip-path:inset(0 0 100% 0)}
+    to{opacity:1;transform:none;clip-path:inset(0 0 0 0)}
+  }
+
+  /* ---- 小屏：自己的一套构图 ---- */
+  @media (max-width:640px){
+    .bar__nav{gap:12px}
+    .bar__nav .tlink--book{display:none}
+    #btnClear{display:none}          /* 小屏用侧栏里每个会话的删除按钮，顶栏留位置给「记录」 */
+    .status{font-size:0}
+    .status::after{content:"连接";font-size:var(--step-small)}
+    .status.is-ok::after{content:"在线"}
+    .status.is-off::after{content:"离线"}
+    .card{max-width:100%}
+    .send{padding:0 18px}
+    .hint{display:none}
+  }
+</style>
 </head>
 <body>
+  <a class="skip" href="#input">跳到输入框</a>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+  <aside class="rail" id="rail" aria-label="历史会话">
+    <div class="rail__head">
+      <h2 class="rail__title">对话记录</h2>
+      <button type="button" class="tlink" id="btnNew">新对话</button>
+      <button type="button" class="tlink rail__close" id="btnRailClose">收起</button>
+    </div>
+    <ul class="rail__list" id="railList"></ul>
+  </aside>
   <div class="app">
-    <div class="topbar">
-      <div class="brand">
-        <div class="logo"></div>
-        <div class="title">
-          <strong>掌柜智库知识库</strong>
-          <span id="subTitle">在线 · 可查询知识库与联网信息</span>
-        </div>
-      </div>
-      <div class="top-actions">
-        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;color:var(--muted);margin-right:10px;">
-          <input type="checkbox" id="streamToggle" checked> 流式输出
+    <header class="bar wrap">
+      <a class="wordmark" href="/html" data-rise style="--i:0">听书知识库</a>
+      <nav class="bar__nav" aria-label="页面导航">
+        <button type="button" class="tlink rail__toggle" id="btnRail" aria-expanded="false" aria-controls="rail">记录</button>
+        <a class="tlink tlink--book" href="/html/book-recommend" data-rise style="--i:1">精品推荐</a>
+        <label class="switch" title="流式输出">
+          <input type="checkbox" id="streamToggle" checked aria-label="流式输出">
+          <span>流式</span>
         </label>
-        <span class="pill" id="apiPill">API: 未连接</span>
-        <button class="btn" id="btnClear">清空对话</button>
-      </div>
-    </div>
+        <span class="status" id="apiPill" role="status" aria-live="polite">连接中</span>
+        <button type="button" class="tlink" id="btnClear">清空对话</button>
+      </nav>
+    </header>
 
-    <div class="chat" id="chat">
-      <div class="dayline">今天</div>
-      <div class="msg bot">
-        <div class="avatar bot">掌柜智库</div>
-        <div>
-          <div class="bubble">你好，我是掌柜智库知识库客服。你可以直接提问，我会在“阶段进度”里展示处理过程。</div>
-          <div class="meta">提示：可以问“如何使用万用表测量电压？”</div>
+    <main class="chat wrap" id="chat">
+      <section class="opening" id="opening" aria-label="开始">
+        <span class="opening__tab" data-rise style="--i:2">馆藏咨询</span>
+        <div class="opening__panel">
+          <h1 class="opening__title" data-rise style="--i:3">问一册书</h1>
+          <p class="opening__note" data-rise style="--i:4">这里是有声书知识库。说出一本书、一个题材，或一种收听场景，我取出它的简介、核心看点与收听建议。</p>
+          <div class="chips">
+            <button class="chip" type="button" data-rise style="--i:5" data-q="推荐几本适合通勤听的科幻有声书">适合通勤的科幻</button>
+            <button class="chip" type="button" data-rise style="--i:6" data-q="《三体》讲了什么">《三体》讲了什么</button>
+            <button class="chip" type="button" data-rise style="--i:7" data-q="有没有悬疑或推理类的有声书">悬疑推理</button>
+            <button class="chip" type="button" data-rise style="--i:8" data-q="适合睡前听的有声书有哪些">适合睡前听</button>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+      <div class="dayline" id="dayline" hidden>今天</div>
+    </main>
 
-    <div class="composer">
-      <textarea id="input" placeholder="请输入问题（Enter 发送，Shift+Enter 换行）"></textarea>
-      <button class="send" id="send">发送</button>
-    </div>
-    <div class="hint">快捷键：<span class="kbd">Enter</span> 发送，<span class="kbd">Shift</span>+<span class="kbd">Enter</span> 换行</div>
+    <form class="composer wrap" id="composer" autocomplete="off" data-rise style="--i:9">
+      <textarea id="input" rows="1" placeholder="说出你想听的书、题材或场景…" aria-label="输入问题"></textarea>
+      <button class="send" id="send" type="submit">发送</button>
+    </form>
+    <p class="hint wrap" data-rise style="--i:10"><b>Enter</b> 发送　·　<b>Shift + Enter</b> 换行</p>
   </div>
 
   <script>
-    // 默认走查询服务同源地址；如你把页面单独打开（file://），回退到查询服务默认端口。
+    // 默认同源；若单独以 file:// 打开，则回退到查询服务默认端口。
     const API_BASE = location.origin.startsWith('http') ? location.origin : 'http://127.0.0.1:8001';
     const chatEl = document.getElementById('chat');
+    const openingEl = document.getElementById('opening');
+    const daylineEl = document.getElementById('dayline');
     const inputEl = document.getElementById('input');
+    const composerEl = document.getElementById('composer');
     const sendBtn = document.getElementById('send');
     const apiPill = document.getElementById('apiPill');
     const btnClear = document.getElementById('btnClear');
+    const railEl = document.getElementById('rail');
+    const railListEl = document.getElementById('railList');
+    const scrimEl = document.getElementById('scrim');
+    const btnRail = document.getElementById('btnRail');
+    const btnRailClose = document.getElementById('btnRailClose');
+    const btnNew = document.getElementById('btnNew');
     const streamToggle = document.getElementById('streamToggle');
 
-    // Session ID Logic
+    // Session ID
     let sessionId = localStorage.getItem('kb_session_id');
     if (!sessionId) {
       sessionId = 'sess-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -316,7 +385,9 @@
     }
 
     function scrollToBottom(){
-      chatEl.scrollTop = chatEl.scrollHeight;
+      // 只有贴着底部时才自动滚动，避免打断向上翻阅
+      const nearBottom = chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight < 120;
+      if (nearBottom) chatEl.scrollTop = chatEl.scrollHeight;
     }
     function nowTime(){
       const d = new Date();
@@ -336,123 +407,172 @@
         .replaceAll('"','&quot;')
         .replaceAll("'","&#039;");
     }
+    function showConversation(){
+      if (openingEl && !openingEl.hidden) openingEl.hidden = true;
+      if (daylineEl && daylineEl.hidden) daylineEl.hidden = false;
+    }
+    function clearConversation(){
+      Array.from(chatEl.querySelectorAll('.turn')).forEach(n => n.remove());
+      if (openingEl) openingEl.hidden = false;
+      if (daylineEl) daylineEl.hidden = true;
+      scrollToBottom();
+    }
 
     function isImageUrl(url){
-      // 增加宽松度，有些 url 可能后面跟了奇怪的参数
-      // 只要包含 .jpg .png 等扩展名，且后面是 ? # 或 结束，或者被某些标点截断前
-      // 简单判断：路径部分以图片后缀结尾
       try {
         const u = new URL(url);
         return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(u.pathname);
       } catch (e) {
-        // 如果 new URL 失败（比如相对路径或非法字符），退回正则匹配
         return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url || '');
       }
     }
-
     function normalizeUrl(rawUrl){
       const s = String(rawUrl || '').trim();
       if(!s) return '';
-      // 尽量保留原始 URL，但把空格编码，避免 img src 失败
       return s.replace(/\s/g, '%20');
     }
-
     function dedupeKeepOrder(arr){
       const seen = new Set();
       const out = [];
       for(const x of (Array.isArray(arr) ? arr : [])){
         const v = String(x || '');
-        if(!v) continue;
-        if(seen.has(v)) continue;
+        if(!v || seen.has(v)) continue;
         seen.add(v);
         out.push(v);
       }
       return out;
     }
-
     function extractUrlsLoose(text){
       const s = String(text || '');
-      // 简单正则提取：匹配 http/https 开头，直到遇到空白字符
-      // [^\s] 包含中文、特殊符号等，直到遇到换行或空格
       const regex = /(https?:\/\/[^\s]+)/g;
       const matches = s.match(regex) || [];
       const urls = [];
-      
-      // 去除首尾标点
       const trimTailPunct = (u) => String(u || '').replace(/[)\]}'">，。,;；\]】）＞]+$/g, '');
       const trimHeadPunct = (u) => String(u || '').replace(/^[<([{'"]+|^[＜（【\[]+/g, '');
-
       for(const m of matches){
-        let u = trimHeadPunct(trimTailPunct(m));
-        // 简单清洗可能混入的结尾
+        const u = trimHeadPunct(trimTailPunct(m));
         if(u) urls.push(u);
       }
       return dedupeKeepOrder(urls);
     }
-
-    function parseImagesFromTextLoosely(text){
-      const urls = extractUrlsLoose(text).filter(isImageUrl);
-      return dedupeKeepOrder(urls);
-    }
-
     function findLastImageMarkerIndex(raw){
       const s = String(raw || '');
-      // 支持多种写法：【图片】、【 图片 】、[图片]、[ 图片 ]
       const re = /【\s*图片\s*】|\[\s*图片\s*\]/g;
-      let m;
-      let lastIdx = -1;
-      let lastLen = 0;
-      while((m = re.exec(s)) !== null){
-        lastIdx = m.index;
-        lastLen = m[0].length;
-      }
+      let m, lastIdx = -1, lastLen = 0;
+      while((m = re.exec(s)) !== null){ lastIdx = m.index; lastLen = m[0].length; }
       return { idx: lastIdx, len: lastLen };
     }
-
     function parseAnswerAndImages(text){
       const raw = String(text || '');
       const { idx, len } = findLastImageMarkerIndex(raw);
       if(idx === -1) return { text: raw, images: [] };
-
       const before = raw.slice(0, idx).trimEnd();
       const after = raw.slice(idx + len).trim();
       const urls = [];
-
-      // 优先按“每行一个 URL”的方式解析，允许 URL 中包含空格
       const lines = after.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       for(const line of lines){
         if(line.startsWith('http://') || line.startsWith('https://')){
           urls.push(line);
         }else{
-          // 兼容同一行包含多个 URL 的情况
-          const matches = extractUrlsLoose(line);
-          for(const u of matches){
-            urls.push(u);
-          }
+          for(const u of extractUrlsLoose(line)) urls.push(u);
         }
       }
-
-      // 去重保序 + 过滤图片链接
       const seen = new Set();
       const images = [];
       for(const u of urls){
         const normalized = normalizeUrl(u);
-        if(!isImageUrl(normalized)) continue;
-        if(seen.has(normalized)) continue;
+        if(!isImageUrl(normalized) || seen.has(normalized)) continue;
         seen.add(normalized);
         images.push(normalized);
       }
       return { text: before, images };
     }
 
-    function shouldShowImagesByAnswer(answerText){
-      const t = String(answerText || '');
-      // 常见“需要看图/见图/如下图”的表述
-      const keywords = [
-        '如图', '如下图', '见图', '见下图', '下图', '上图',
-        '图片', '示意图', '结构图', '外观', '接线图', '电路图', '原理图', '安装图', '尺寸图', '截图'
-      ];
-      return keywords.some(k => t.includes(k));
+    // 轻量 Markdown 渲染器（先转义再渲染，防 XSS；无第三方依赖）
+    function renderMarkdown(md){
+      const raw = String(md == null ? '' : md).replace(/\r\n?/g, '\n');
+      let text = escapeHtml(raw);
+      const codeBlocks = [];
+      text = text.replace(/```[^\n]*\n?([\s\S]*?)```/g, (m, code) => {
+        codeBlocks.push(code.replace(/\n$/, ''));
+        return `\u0000CODE${codeBlocks.length - 1}\u0000`;
+      });
+
+      function inline(s){
+        return s
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+          .replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+      }
+
+      const lines = text.split('\n');
+      const out = [];
+      let para = [];
+      let listType = null;
+
+      const flushPara = () => { if (para.length) { out.push(`<p>${para.join('<br>')}</p>`); para = []; } };
+      const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null; } };
+
+      for (let i = 0; i < lines.length; i++){
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (/^\u0000CODE\d+\u0000$/.test(trimmed)) { flushPara(); closeList(); out.push(trimmed); continue; }
+        if (!trimmed) { flushPara(); closeList(); continue; }
+        if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) { flushPara(); closeList(); out.push('<hr>'); continue; } // taste-skill-ignore: Markdown 分割线，样式已改为 4px 实色粗条
+        const heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
+        if (heading) {
+          flushPara(); closeList();
+          const level = Math.min(heading[1].length, 4);
+          out.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+          continue;
+        }
+        if (/^&gt;\s?/.test(trimmed)) {
+          flushPara(); closeList();
+          out.push(`<blockquote>${inline(trimmed.replace(/^&gt;\s?/, ''))}</blockquote>`);
+          continue;
+        }
+        if (trimmed.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(lines[i + 1])) {
+          flushPara(); closeList();
+          const headerCells = trimmed.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+          out.push('<table><thead><tr>' + headerCells.map(c => `<th>${inline(c)}</th>`).join('') + '</tr></thead><tbody>');
+          i += 2;
+          while (i < lines.length && lines[i].includes('|')) {
+            const cells = lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+            out.push('<tr>' + cells.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>');
+            i++;
+          }
+          i--;
+          out.push('</tbody></table>');
+          continue;
+        }
+        const ul = trimmed.match(/^[-*+]\s+(.*)$/);
+        if (ul) {
+          flushPara();
+          if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; }
+          out.push(`<li>${inline(ul[1])}</li>`);
+          continue;
+        }
+        const ol = trimmed.match(/^\d+[.)]\s+(.*)$/);
+        if (ol) {
+          flushPara();
+          if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
+          out.push(`<li>${inline(ol[1])}</li>`);
+          continue;
+        }
+        closeList();
+        para.push(inline(trimmed));
+      }
+      flushPara(); closeList();
+
+      let html = out.join('\n');
+      html = html.replace(/\u0000CODE(\d+)\u0000/g, (m, idx) => {
+        const code = codeBlocks[Number(idx)] || '';
+        return `<pre><code>${code}</code></pre>`;
+      });
+      return html;
     }
 
     function renderAnswerWithImages(containerEl, answerText, candidateImageUrls){
@@ -460,39 +580,22 @@
       const candidates = Array.isArray(candidateImageUrls)
         ? candidateImageUrls.map(normalizeUrl).filter(isImageUrl)
         : [];
-      const hasBlockImages = imagesFromBlock && imagesFromBlock.length > 0;
-      
-      // 使用宽松提取
       const looseImages = extractUrlsLoose(answerText).map(normalizeUrl).filter(isImageUrl);
-      
-      // 只要后端给了候选图片，就展示（避免答案没写“如图”但用户仍需要看图）
-      // 或者从文本里提取到了图片 URL
-      const shouldShow = hasBlockImages || (candidates.length > 0) || (looseImages.length > 0);
-      
-      // 优先级：Block 显式标记 > 后端候选 > 文本宽松提取
-      // 注意：这里做个并集可能更好，防止漏掉
-      const allImages = new Set([
-          ...(hasBlockImages ? imagesFromBlock : []),
-          ...candidates,
-          ...looseImages
-      ]);
+      const allImages = new Set([...(imagesFromBlock || []), ...candidates, ...looseImages]);
       const images = Array.from(allImages);
 
       containerEl.textContent = '';
 
+      const textEl = document.createElement('div');
+      textEl.className = 'answer-text';
       if((text || '').trim().length > 0){
-        const textEl = document.createElement('div');
-        textEl.className = 'answer-text';
-        textEl.textContent = text;
-        containerEl.appendChild(textEl);
+        textEl.innerHTML = renderMarkdown(text);
       }else{
-        const textEl = document.createElement('div');
-        textEl.className = 'answer-text';
-        textEl.textContent = '（已完成，但未返回答案）';
-        containerEl.appendChild(textEl);
+        textEl.textContent = '已完成检索，但没有返回可用内容。';
       }
+      containerEl.appendChild(textEl);
 
-      if(images && images.length > 0){
+      if(images.length > 0){
         const imgWrap = document.createElement('div');
         imgWrap.className = 'answer-images';
         for(const url of images){
@@ -500,11 +603,9 @@
           const img = document.createElement('img');
           img.loading = 'lazy';
           img.src = safeUrl;
-          img.alt = '参考图片';
+          img.alt = '答案配图';
           img.referrerPolicy = 'no-referrer';
-          img.addEventListener('error', () => {
-            img.style.display = 'none';
-          });
+          img.addEventListener('error', () => { img.style.display = 'none'; });
           imgWrap.appendChild(img);
 
           const link = document.createElement('a');
@@ -518,149 +619,122 @@
       }
     }
 
-    function addUserMsg(text){
-      const html = `
-        <div class="msg user">
-          <div>
-            <div class="bubble">${escapeHtml(text)}</div>
-            <div class="meta">${nowTime()}</div>
-          </div>
-          <div class="avatar">我</div>
-        </div>
-      `;
-      chatEl.insertAdjacentHTML('beforeend', html);
-      scrollToBottom();
-    }
-
-    function addUserMsgWithTime(text, ts){
-      const html = `
-        <div class="msg user">
-          <div>
-            <div class="bubble">${escapeHtml(text)}</div>
-            <div class="meta">${formatTime(ts)}</div>
-          </div>
-          <div class="avatar">我</div>
-        </div>
-      `;
-      chatEl.insertAdjacentHTML('beforeend', html);
-      scrollToBottom();
-    }
-
-    function addBotMsgWithTime(text, ts, imageUrls){
-      const id = 'bot-his-' + Math.random().toString(36).slice(2);
-      const html = `
-        <div class="msg bot" id="${id}">
-          <div class="avatar bot">掌柜智库</div>
-          <div>
-            <div class="bubble"><div class="answer"></div></div>
-            <div class="meta">${formatTime(ts)}</div>
-          </div>
-        </div>
-      `;
-      chatEl.insertAdjacentHTML('beforeend', html);
+    function addUserMsg(text, ts){
+      showConversation();
+      const id = 'you-' + Math.random().toString(36).slice(2);
+      chatEl.insertAdjacentHTML('beforeend', `
+        <article class="turn turn--you is-new" id="${id}">
+          <div class="card card--you"><p></p></div>
+          <p class="stamp">${formatTime(ts)}</p>
+        </article>
+      `);
       const el = document.getElementById(id);
-      if(el){
-        const answerEl = el.querySelector('.answer');
-        renderAnswerWithImages(answerEl, text || '', imageUrls || []);
-      }
+      el.querySelector('.card--you p').textContent = text;
       scrollToBottom();
+      return el;
     }
 
-    function addBotMsgSkeleton(){
-      const id = 'bot-' + Math.random().toString(36).slice(2);
-      const html = `
-        <div class="msg bot" id="${id}">
-          <div class="avatar bot">掌柜智库</div>
-          <div style="min-width: 180px;">
-            <div class="bubble">
-              <span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
-              <details class="progress" open>
-                <summary>阶段进度（等待中）</summary>
-                <ul></ul>
+    function addBotMsg(text, ts, imageUrls){
+      showConversation();
+      const id = 'lib-' + Math.random().toString(36).slice(2);
+      chatEl.insertAdjacentHTML('beforeend', `
+        <article class="turn turn--lib" id="${id}">
+          <div class="card">
+            <div class="card__tab"><span>知识库</span></div>
+            <div class="card__body"><div class="answer"></div></div>
+          </div>
+          <p class="stamp">${formatTime(ts)}</p>
+        </article>
+      `);
+      const el = document.getElementById(id);
+      renderAnswerWithImages(el.querySelector('.answer'), text || '', imageUrls || []);
+      scrollToBottom();
+      return el;
+    }
+
+    function addBotSkeleton(){
+      showConversation();
+      const id = 'lib-' + Math.random().toString(36).slice(2);
+      chatEl.insertAdjacentHTML('beforeend', `
+        <article class="turn turn--lib is-new" id="${id}">
+          <div class="card">
+            <div class="card__tab"><span id="${id}-tab">检索中</span></div>
+            <div class="card__body">
+              <div class="answer"><div class="answer-text">正在从知识库检索…</div></div>
+              <details class="steps" open>
+                <summary>检索过程</summary>
+                <ul class="steps__list"><li class="is-pending">等待服务响应</li></ul>
               </details>
             </div>
-            <div class="meta">${nowTime()}</div>
           </div>
-        </div>
-      `;
-      chatEl.insertAdjacentHTML('beforeend', html);
+          <p class="stamp">${nowTime()}</p>
+        </article>
+      `);
       scrollToBottom();
       return document.getElementById(id);
     }
 
+    const INTENT_LABEL = {
+      book_recommend: '精品推荐',
+      book_detail: '书籍详情',
+      note_search: '听书笔记',
+      general_qa: '知识库',
+    };
+
     function renderProgress(botMsgEl, doneList, runningList, status){
-      const details = botMsgEl.querySelector('details.progress');
+      const details = botMsgEl.querySelector('details.steps');
+      if(!details) return;
       const summary = details.querySelector('summary');
-      const ul = details.querySelector('ul');
+      const ul = details.querySelector('.steps__list');
       const done = Array.isArray(doneList) ? doneList : [];
       const running = Array.isArray(runningList) ? runningList : [];
-      const totalDone = done.length;
-      const totalRun = running.length;
 
-      const statusMap = {
-        'processing': '处理中',
-        'completed': '已完成',
-        'failed': '失败',
-        'pending': '等待中',
-      };
-      const displayStatus = statusMap[status] || status || 'unknown';
+      summary.textContent = `检索过程 · 已完成 ${done.length} 步${running.length ? `，进行中 ${running.length} 步` : ''}`;
 
-      summary.textContent = `阶段进度（已完成${totalDone}，进行中${totalRun}，状态：${displayStatus}）`;
-
-      const lines = [
-        ...done.map(x => `✅ ${x}`),
-        ...running.map(x => `⏳ ${x}`)
+      const rows = [
+        ...done.map(t => `<li class="is-done">${escapeHtml(t)}</li>`),
+        ...running.map(t => `<li class="is-run">${escapeHtml(t)}</li>`),
       ];
-      ul.innerHTML = '';
-      if(lines.length === 0){
-        ul.insertAdjacentHTML('beforeend', '<li>暂无进度</li>');
-      }else{
-        for(const line of lines){
-          ul.insertAdjacentHTML('beforeend', `<li>${escapeHtml(line)}</li>`);
-        }
-      }
+      ul.innerHTML = rows.length ? rows.join('') : '<li class="is-pending">等待服务响应</li>';
     }
 
-    function finalizeBotAnswer(botMsgEl, answer, error, imageUrls){
-      const bubble = botMsgEl.querySelector('.bubble');
-      const progress = botMsgEl.querySelector('details.progress');
+    function setTabLabel(botMsgEl, intent){
+      const tab = botMsgEl.querySelector('.card__tab span');
+      if(tab) tab.textContent = INTENT_LABEL[intent] || '知识库';
+    }
+
+    function finalizeBotAnswer(botMsgEl, answer, error, imageUrls, intent){
+      const body = botMsgEl.querySelector('.card__body');
+      const steps = botMsgEl.querySelector('details.steps');
       const err = (error || '').trim();
+      setTabLabel(botMsgEl, intent);
 
       if(err){
-        const progressEl = progress ? progress : null;
-        if(progressEl) {
-            progressEl.remove();
-            progressEl.removeAttribute('open');
-        }
-        bubble.textContent = '';
-        const errEl = document.createElement('div');
-        errEl.className = 'answer';
-        errEl.textContent = `抱歉，本次处理失败：\n${err}`;
-        bubble.appendChild(errEl);
-        if(progressEl) bubble.appendChild(progressEl);
+        const box = body.querySelector('.answer');
+        box.innerHTML = '';
+        const e = document.createElement('div');
+        e.className = 'answer-text answer-failed';
+        e.textContent = `本次处理失败：${err}`;
+        box.appendChild(e);
+        if(steps){ steps.open = false; }
         return;
       }
 
-      const progressEl = progress ? progress : null;
-      if(progressEl) {
-        progressEl.remove();
-        progressEl.removeAttribute('open'); // 完成后自动收起
-      }
-      bubble.textContent = '';
-      const answerEl = document.createElement('div');
-      answerEl.className = 'answer';
-      bubble.appendChild(answerEl);
-      renderAnswerWithImages(answerEl, answer || '', imageUrls || []);
-      if(progressEl) bubble.appendChild(progressEl);
+      renderAnswerWithImages(body.querySelector('.answer'), answer || '', imageUrls || []);
+      if(steps){ steps.open = false; }
+      // 一轮问答结束后刷新侧栏清单：新会话首次提问后才会出现在这里
+      setTimeout(loadSessions, 400);
     }
 
     async function apiHealth(){
       try{
         const res = await fetch(`${API_BASE}/health`);
         if(!res.ok) throw new Error('health not ok');
-        apiPill.textContent = `API: 已连接`;
+        apiPill.textContent = '在线';
+        apiPill.className = 'status is-ok';
       }catch(e){
-        apiPill.textContent = `API: 未连接`;
+        apiPill.textContent = '离线';
+        apiPill.className = 'status is-off';
       }
     }
 
@@ -671,19 +745,99 @@
         const data = await res.json();
         const items = Array.isArray(data.items) ? data.items : [];
         if(items.length === 0) return;
-        // 保留首条欢迎消息，其余先清空再渲染历史
-        const nodes = Array.from(chatEl.querySelectorAll('.msg'));
-        for(let i=1;i<nodes.length;i++) nodes[i].remove();
-        items.reverse()
-        for(const item of items){
+        clearConversation();
+        for(const item of items.slice().reverse()){
           if(item.role === 'user'){
-            addUserMsgWithTime(item.text || '', item.ts);
+            addUserMsg(item.text || '', item.ts);
           }else{
-            addBotMsgWithTime(item.text || '', item.ts, item.image_urls || []);
+            addBotMsg(item.text || '', item.ts, item.image_urls || []);
           }
         }
         scrollToBottom();
       }catch(_){}
+    }
+
+    /* ===== 历史会话清单 =====
+       会话 id 是前端生成的，只存在 localStorage 里；一旦换浏览器/清站点数据就换了新 id，
+       旧对话虽然还在 Mongo 里，界面上却再也看不到。所以这里从后端拉一份「会话清单」，
+       侧栏可切换、可删除，不再依赖 localStorage 记住那一个 id。 */
+    function relTime(ts){
+      const t = Number(ts) || 0;
+      if(!t) return '';
+      const diff = Date.now() / 1000 - t;
+      if(diff < 60) return '刚刚';
+      if(diff < 3600) return Math.floor(diff / 60) + ' 分钟前';
+      if(diff < 86400) return Math.floor(diff / 3600) + ' 小时前';
+      const d = new Date(t * 1000);
+      const now = new Date();
+      const md = `${d.getMonth() + 1}月${d.getDate()}日`;
+      return d.getFullYear() === now.getFullYear() ? md : `${d.getFullYear()}年${md}`;
+    }
+
+    function markCurrentSession(){
+      Array.from(railListEl.querySelectorAll('.rail__row')).forEach(row => {
+        const on = row.dataset.session === sessionId;
+        row.classList.toggle('is-current', on);
+        const btn = row.querySelector('.rail__item');
+        if(btn) btn.setAttribute('aria-current', on ? 'true' : 'false');
+      });
+    }
+
+    function renderSessions(sessions){
+      if(!sessions.length){
+        railListEl.innerHTML = '<li class="rail__empty">还没有对话记录。开始提问，这里会按会话存档，随时能切回来。</li>';
+        return;
+      }
+      railListEl.innerHTML = sessions.map(s => `
+        <li class="rail__row${s.session_id === sessionId ? ' is-current' : ''}" data-session="${escapeHtml(s.session_id)}">
+          <button type="button" class="rail__item" data-act="open" aria-current="${s.session_id === sessionId ? 'true' : 'false'}">
+            <span class="rail__item-title">${escapeHtml(s.title || '未命名对话')}</span>
+            <span class="rail__meta">${relTime(s.last_ts)}　${Number(s.count) || 0} 条</span>
+          </button>
+          <button type="button" class="rail__del" data-act="del" aria-label="删除这个会话" title="删除">×</button>
+        </li>`).join('');
+    }
+
+    async function loadSessions(){
+      try{
+        const res = await fetch(`${API_BASE}/history/sessions?limit=30`);
+        if(!res.ok) return;
+        const data = await res.json();
+        renderSessions(Array.isArray(data.sessions) ? data.sessions : []);
+      }catch(_){}
+    }
+
+    function openRail(){
+      railEl.classList.add('is-open');
+      scrimEl.classList.add('is-open');
+      scrimEl.setAttribute('aria-hidden', 'false');
+      btnRail.setAttribute('aria-expanded', 'true');
+    }
+    function closeRail(){
+      railEl.classList.remove('is-open');
+      scrimEl.classList.remove('is-open');
+      scrimEl.setAttribute('aria-hidden', 'true');
+      btnRail.setAttribute('aria-expanded', 'false');
+    }
+
+    function startNewSession(){
+      sessionId = 'sess-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('kb_session_id', sessionId);
+      clearConversation();
+      markCurrentSession();
+      closeRail();
+      inputEl.focus();
+    }
+
+    function switchSession(sid){
+      if(!sid) return;
+      closeRail();
+      if(sid === sessionId) return;
+      sessionId = sid;
+      localStorage.setItem('kb_session_id', sessionId);
+      clearConversation();
+      markCurrentSession();
+      loadHistory();
     }
 
     async function submitQuery(text){
@@ -691,11 +845,7 @@
       const res = await fetch(`${API_BASE}/query`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          query: text,
-          session_id: sessionId,
-          is_stream: isStream
-        })
+        body: JSON.stringify({ query: text, session_id: sessionId, is_stream: isStream })
       });
       if(!res.ok){
         const msg = await res.text();
@@ -705,83 +855,59 @@
     }
 
     async function poll(taskId, botMsgEl){
-      const typing = botMsgEl.querySelector('.typing');
       const interval = setInterval(async () => {
         try{
           const res = await fetch(`${API_BASE}/status/${taskId}`);
           const data = await res.json();
           renderProgress(botMsgEl, data.done_list, data.running_list, data.status);
 
-          if(data.status === 'completed'){
-            if(typing) typing.remove();
-            finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || []);
-            clearInterval(interval);
-            sendBtn.disabled = false;
-          }else if(data.status === 'failed'){
-            if(typing) typing.remove();
-            finalizeBotAnswer(botMsgEl, data.answer, data.error || 'failed', data.image_urls || []);
+          if(data.status === 'completed' || data.status === 'failed'){
+            finalizeBotAnswer(botMsgEl, data.answer, data.status === 'failed' ? (data.error || 'failed') : data.error, data.image_urls || [], data.intent);
             clearInterval(interval);
             sendBtn.disabled = false;
           }
-        }catch(e){
-          // 轮询错误不立刻终止，让用户稍后重试
-        }
+        }catch(e){ /* 轮询偶发错误不终止，等待下次重试 */ }
       }, 1200);
     }
 
     async function onSend(){
-      console.log('[perf] A onSend start', performance.now());
       const text = (inputEl.value || '').trim();
       if(!text) return;
       inputEl.value = '';
+      inputEl.style.height = 'auto';
       addUserMsg(text);
-      const botMsgEl = addBotMsgSkeleton();
+      const botMsgEl = addBotSkeleton();
       sendBtn.disabled = true;
 
       try{
         const isStream = streamToggle.checked;
-        console.log('[perf] B submitQuery start', performance.now(), { isStream });
         const data = await submitQuery(text);
-        console.log('[perf] B submitQuery end', performance.now(), data);
-        
-        // 渲染初始状态
         renderProgress(botMsgEl, [], [], 'pending');
 
         if (!isStream) {
-          // 非流式：直接拿到结果
-          // data: { session_id, answer, done_list, error, message }
           renderProgress(botMsgEl, data.done_list || [], [], 'completed');
-          finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || []);
+          finalizeBotAnswer(botMsgEl, data.answer, data.error, data.image_urls || [], data.intent);
           sendBtn.disabled = false;
           return;
         }
 
-        // 流式：SSE
-        const { session_id } = data; // 此时 backend 返回 session_id
-        
-        const bubble = botMsgEl.querySelector('.bubble');
-        let answerEl = bubble.querySelector('.answer');
-        if(!answerEl){
-          answerEl = document.createElement('div');
-          answerEl.className = 'answer';
-          bubble.insertBefore(answerEl, bubble.firstChild);
-        }
+        const { session_id } = data;
+        const body = botMsgEl.querySelector('.card__body');
+        const answerEl = body.querySelector('.answer');
+        answerEl.innerHTML = '';
+        const live = document.createElement('div');
+        live.className = 'answer-text';
+        answerEl.appendChild(live);
 
         const es = new EventSource(`${API_BASE}/stream/${session_id}`);
-        console.log('[perf] C EventSource created', performance.now(), { session_id });
         let rawAnswerText = '';
 
         es.addEventListener('progress', (e) => {
           try{
             const d = JSON.parse(e.data || '{}');
             renderProgress(botMsgEl, d.done_list, d.running_list, d.status);
-            // 当进度状态已完成时，提前结束“...”等待态
-            if(d && d.status === 'completed'){
-              const typing = botMsgEl.querySelector('.typing');
-              if(typing) typing.remove();
-              // 防止后端未发送 final 导致按钮一直禁用
-              sendBtn.disabled = false;
-            }
+            setTabLabel(botMsgEl, d.intent);
+            if(d && d.status === 'completed') sendBtn.disabled = false;
           }catch(_){}
         });
 
@@ -791,107 +917,100 @@
             const delta = d.delta || '';
             if(delta){
               rawAnswerText += delta;
-              // 即使后端未发送 final，也尽可能在流式过程中渲染图片
-              renderAnswerWithImages(answerEl, rawAnswerText, []);
+              live.innerHTML = renderMarkdown(rawAnswerText);
               scrollToBottom();
             }
           }catch(_){}
         });
 
-        es.addEventListener('final', (e) => {
-          const typing = botMsgEl.querySelector('.typing');
-          if(typing) typing.remove();
-          // 收起进度条
-          const progress = botMsgEl.querySelector('details.progress');
-          if(progress) progress.removeAttribute('open');
-          
-          try{
-            const d = JSON.parse(e.data || '{}');
-            // 流式 delta 可能不包含“【图片】/图片列表”，最终包的 d.answer 才是完整答案；优先使用 d.answer
-            const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || answerEl.textContent || '');
-            renderAnswerWithImages(answerEl, finalText, d.image_urls || []);
-          }catch(_){}
+        const finish = (d) => {
+          const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || '');
+          finalizeBotAnswer(botMsgEl, finalText, d && d.error, (d && d.image_urls) || [], d && d.intent);
           es.close();
           sendBtn.disabled = false;
-        });
+        };
 
-        es.addEventListener('final_answer', (e) => {
-           // 响应用户的 final_answer 信号，确保图片渲染
-          const typing = botMsgEl.querySelector('.typing');
-          if(typing) typing.remove();
-          const progress = botMsgEl.querySelector('details.progress');
-          if(progress) progress.removeAttribute('open');
-          
-          try{
-            const d = JSON.parse(e.data || '{}');
-            const finalText = (d && typeof d.answer === 'string' && d.answer.trim().length > 0) ? d.answer : (rawAnswerText || answerEl.textContent || '');
-            renderAnswerWithImages(answerEl, finalText, d.image_urls || []);
-          }catch(_){}
-          es.close();
-          sendBtn.disabled = false;
-        });
+        es.addEventListener('final', (e) => { try{ finish(JSON.parse(e.data || '{}')); }catch(_){ finish(null); } });
+        es.addEventListener('final_answer', (e) => { try{ finish(JSON.parse(e.data || '{}')); }catch(_){ finish(null); } });
 
         es.addEventListener('error', (e) => {
-          const typing = botMsgEl.querySelector('.typing');
-          if(typing) typing.remove();
-          // 收起进度条
-          const progress = botMsgEl.querySelector('details.progress');
-          if(progress) progress.removeAttribute('open');
-
           try{
-            const msg = e && e.data ? (JSON.parse(e.data).error || 'SSE 连接中断/失败') : 'SSE 连接中断/失败';
-            rawAnswerText += `\n\n（错误：${msg}）`;
-            renderAnswerWithImages(answerEl, rawAnswerText, []);
+            const msg = e && e.data ? (JSON.parse(e.data).error || 'SSE 连接中断') : 'SSE 连接中断';
+            finalizeBotAnswer(botMsgEl, rawAnswerText + `\n\n（连接中断：${msg}）`, '', [], null);
           }catch(_){
-            rawAnswerText += `\n\n（错误：SSE 连接中断/失败）`;
-            renderAnswerWithImages(answerEl, rawAnswerText, []);
+            finalizeBotAnswer(botMsgEl, rawAnswerText + '\n\n（连接中断）', '', [], null);
           }
           es.close();
           sendBtn.disabled = false;
         });
       }catch(e){
-        const bubble = botMsgEl.querySelector('.bubble');
-        const progress = botMsgEl.querySelector('details.progress');
-        const typing = botMsgEl.querySelector('.typing');
-        if(typing) typing.remove();
-        bubble.innerHTML = `请求失败：${escapeHtml(e.message || e)}\n\n` + progress.outerHTML;
+        finalizeBotAnswer(botMsgEl, '', (e && e.message) || String(e), [], null);
         sendBtn.disabled = false;
       }
     }
 
-    sendBtn.addEventListener('click', onSend);
+    composerEl.addEventListener('submit', (e) => { e.preventDefault(); onSend(); });
     inputEl.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter' && !e.shiftKey){
-        e.preventDefault();
+      if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }
+    });
+    // 输入框随内容增高
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+    });
+    document.querySelectorAll('.chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        inputEl.value = chip.dataset.q || chip.textContent.trim();
         onSend();
-      }
+      });
     });
     btnClear.addEventListener('click', async () => {
-      if(!confirm('确定要清空当前会话的历史记录吗？这将无法恢复。')) return;
-
+      if(!confirm('清空当前会话的历史记录？该操作不可恢复。')) return;
       try {
         const res = await fetch(`${API_BASE}/history/${sessionId}`, { method: 'DELETE' });
-        if(!res.ok) {
-           console.error("Failed to clear history backend, status:", res.status);
-           alert('服务端清空失败，仅清空本地显示');
-        }
+        if(!res.ok) console.error('清空历史失败，状态：', res.status);
       } catch(e) {
-        console.error("Failed to clear history backend", e);
-        alert('服务端清空失败，仅清空本地显示');
+        console.error('清空历史失败', e);
       }
+      clearConversation();
+      loadSessions();
+    });
 
-      // 清空除首条欢迎消息外的内容
-      const nodes = Array.from(chatEl.querySelectorAll('.msg'));
-      for(let i=1;i<nodes.length;i++) nodes[i].remove();
-      scrollToBottom();
+    // 侧栏：打开/收起、切换会话、删除会话、新对话
+    btnRail.addEventListener('click', () => {
+      railEl.classList.contains('is-open') ? closeRail() : openRail();
+    });
+    btnRailClose.addEventListener('click', closeRail);
+    scrimEl.addEventListener('click', closeRail);
+    btnNew.addEventListener('click', () => { startNewSession(); loadSessions(); });
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape' && railEl.classList.contains('is-open')) closeRail();
+    });
+
+    railListEl.addEventListener('click', async (e) => {
+      const row = e.target.closest('.rail__row');
+      if(!row) return;
+      const sid = row.dataset.session;
+      if(!sid) return;
+
+      if(e.target.closest('[data-act="del"]')){
+        if(!confirm('删除这个会话的全部记录？该操作不可恢复。')) return;
+        try {
+          const res = await fetch(`${API_BASE}/history/${sid}`, { method: 'DELETE' });
+          if(!res.ok) console.error('删除会话失败，状态：', res.status);
+        } catch(err) { console.error('删除会话失败', err); }
+        if(sid === sessionId) startNewSession();
+        loadSessions();
+        return;
+      }
+      switchSession(sid);
     });
 
     apiHealth();
     setInterval(apiHealth, 5000);
     loadHistory();
+    loadSessions();
     setTimeout(() => inputEl.focus(), 200);
   </script>
 </body>
 </html>
-
-

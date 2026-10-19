@@ -33,6 +33,7 @@ _NODE_NAME_TO_CN: Dict[str, str] = {
     "node_md_img": "Markdown图片处理",
     "node_item_name_recognition": "主体名称识别",
     "node_document_split": "文档切分",
+    "node_audiobook_meta": "听书元数据抽取",
     "node_bge_embedding": "向量生成",
     "node_import_kg": "导入知识图谱",
     "node_import_milvus": "导入向量库",
@@ -40,6 +41,7 @@ _NODE_NAME_TO_CN: Dict[str, str] = {
     "END": "处理完成",
     # --- Query 流程节点 ---
     "node_item_name_confirm": "确认问题产品",
+    "node_intent_recognize": "意图识别",
     "node_answer_output": "生成答案",
     "node_rerank": "重排序",
     "node_rrf": "倒排融合",

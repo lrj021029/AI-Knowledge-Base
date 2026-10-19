@@ -15,7 +15,7 @@ def node_search_embedding(state):
     state = search_by_embedding(state)
     add_done_task(state["session_id"], sys._getframe().f_code.co_name, state.get("is_stream"))
     return {
-        "embedding_chunks":[]
+        "embedding_chunks": state.get("embedding_chunks", [])
     }
 
 if __name__ == "__main__":

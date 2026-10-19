@@ -1,10 +1,20 @@
-from app.shared.clients.mongo_history_utils import clear_history,get_recent_messages,save_chat_message,update_message_item_names
+from app.shared.clients.mongo_history_utils import (
+    clear_history,
+    get_recent_messages,
+    list_sessions,
+    save_chat_message,
+    update_message_item_names,
+)
 
 
 
 class HistoryRepository:
     def list_recent(self,session_id:str,limit:int = 10) -> list[dict]:
         return get_recent_messages(session_id,limit)
+
+    def list_sessions(self, limit: int = 30) -> list[dict]:
+        """最近活跃的会话清单（会话 id + 首条用户提问作为标题）。"""
+        return list_sessions(limit)
 
 
     def save_message(

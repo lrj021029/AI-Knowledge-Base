@@ -1,11 +1,19 @@
-Based on the code map provided, I can see this is a RAG (Retrieval-Augmented Generation) knowledge base project. Let me create a comprehensive README for this project.
-
 # AI 知识库 (AI Knowledge Base)
 
 这是一个基于 RAG 技术的智能知识库系统，支持文档导入、智能问答、混合搜索等功能。项目采用 FastAPI 构建 RESTful API，结合 Milvus 向量数据库、LLM 大语言模型等组件实现高效的知识检索与问答。
 
-## 功能特性
-
+## 界面预览
+主页
+![主页](assets/desktop-fold.jpg)
+推荐
+![推荐](assets/recommand.png)
+聊天
+![聊天](assets/chat.png)
+![聊天](assets/chat1.png)
+![聊天](assets/chat2.png)
+![聊天](assets/chat3.png)
+导入
+![导入](assets/import.png)
 ### 文档导入
 - **PDF 转 Markdown**：支持将 PDF 文档转换为 Markdown 格式
 - **文档智能分块**：基于标题和内容进行智能文档分割
@@ -78,9 +86,7 @@ ai_0812_knowledge_base/
 
 ### 安装依赖
 
-```bash
-pip install -r requirements.txt
-```
+uv sync
 
 ### 配置环境变量
 
@@ -123,7 +129,8 @@ python main.py
 |------|------|------|
 | `/query` | POST | 提交问答请求 |
 | `/stream/{session_id}` | GET | 流式获取回答 |
-| `/history/{session_id}` | GET | 获取对话历史 |
+| `/history/sessions` | GET | 历史会话清单（按最后一条消息倒序，含首条提问作为标题） |
+| `/history/{session_id}` | GET | 获取单个会话的对话历史（最近 50 条） |
 | `/history/{session_id}` | DELETE | 清空对话历史 |
 | `/health` | GET | 健康检查 |
 
@@ -133,14 +140,7 @@ python main.py
 
 在 `app/process/import_/agent/nodes/` 目录下创建新的节点文件：
 
-```python
-from app.process.import_.agent.state import ImportGraphState
 
-@node_log("node_xxx")
-def node_xxx(state: ImportGraphState) -> ImportGraphState:
-    # 实现节点逻辑
-    return state
-```
 
 ### 添加新的查询服务
 
@@ -156,6 +156,3 @@ def node_xxx(state: ImportGraphState) -> ImportGraphState:
 - **Reranker**: FlagReranker
 - **Graph Workflow**: LangGraph
 
-## 许可证
-
-本项目仅供学习和研究使用。

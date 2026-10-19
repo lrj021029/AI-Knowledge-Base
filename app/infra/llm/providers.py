@@ -17,7 +17,7 @@ class LLMProvider():
 
     def reranker_computer_scores(self,question_answer_pair_list:list[list[str,str]]) -> list[float]:
         reranker_model = get_reranker_model()
-        score_list:list[float] = reranker_model.compute_score(question_answer_pair_list,normalized=True)
+        score_list:list[float] = reranker_model.compute_score(question_answer_pair_list,normalize=True)
         return score_list
 
 
@@ -25,7 +25,6 @@ class LLMProvider():
         reranker_model = get_reranker_model()
         tokenizer = reranker_model.tokenizer
         token_ids_list:list = tokenizer.encode(content)
-        print(token_ids_list)
         token_numbers = len(token_ids_list)
         return token_numbers
 

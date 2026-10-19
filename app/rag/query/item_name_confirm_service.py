@@ -42,14 +42,13 @@ def call_llm_confirm_item_name_and_rewritten_query(
     返回：{"rewritten_query": str, "item_names": list[str]}
     """
     llm_client = llm_provider.chat(json_model=True)
-    # history_text:str = ""
     # 拼接历史上下文
     if message_list:
         history_text = "\n".join(
             f"{index},原始问题:{msg.get('text')},"
-            f"重写后的问题{msg.get('rewritten_query')},"
-            f"关联主体: {'、'.join(msg.get('item_names'))}"
-            for index, msg in message_list
+            f"重写后的问题:{msg.get('rewritten_query')},"
+            f"关联主体: {'、'.join(msg.get('item_names') or [])}"
+            for index, msg in enumerate(message_list, start=1)
         )
     else:
         history_text = "没有有效聊天记录"
@@ -91,11 +90,14 @@ def milvus_hybrid_search(item_names: list[str]) -> dict[str, list[dict[str, Any]
         reqs:list[AnnSearchRequest] = milvus_gateway.create_requests(dense_vector=dense_vector, sparse_vector=sparse_vector,limit=5*2)
 
         milvus_result = milvus_gateway.hybrid_search(
-                collection_name=milvus_gateway.chunks_collection,
+                # 修复原有缺陷：主体确认应在「主体名称集合」中检索，
+                # 此前误检索 chunks 集合，导致分数恒低于阈值、主体无法确认。
+                collection_name=milvus_gateway.item_name_collection,
                 reqs=reqs,
                 ranker_weights=(0.5, 0.5),
                 norm_score=True,
                 limit=5,
+                output_fields=["item_name", "file_title"],
             )
 
         if milvus_result and milvus_result[0]:
@@ -143,22 +145,28 @@ def select_item_names(milvus_result: dict[str,list[dict[str, Any]]]) ->dict[str,
 def update_query_state(item_list:dict[str,list[str]],rewritten_query:str,state:QueryGraphState):
     confirm_item_name_list:list[str] = item_list.get("confirmed_item_name_list",[])
     optional_item_name_list:list[str] = item_list.get("optional_item_name_list",[])
+    # 无论主体是否确认，都先写入改写后的问题，供后续检索节点使用
+    # （未确认主体时会退化为全库检索，同样需要 rewritten_query）
+    if rewritten_query:
+        state["rewritten_query"] = rewritten_query
     if confirm_item_name_list:
         state["item_names"] = confirm_item_name_list
-        state["rewritten_query"] = rewritten_query
         return
     if optional_item_name_list:
-        state["answer"] = f"without clearly entity,but similary: {','.join(optional_item_name_list)},please ask again"
+        state["answer"] = f"未明确识别到您想查询的主体，您是否想了解：{'、'.join(optional_item_name_list)}？请补充说明后重试。"
         return
 
-    state["answer"] = f"without any matched entity,please ask again"
+    # 未识别到主体：不在这里终止。由 main_graph.after_node_item_name_confirm 决定
+    # 退化为「无元数据过滤」的全库检索，以便回答「某个主题的解释」类问题。
+    logger.info("未识别到主体,交由后续节点退化为全库检索")
 
 
-def save_user_chat_message(session_id:str,message:str,rewritten_query:str,original_query:str,item_names):
+def save_user_chat_message(session_id: str, message: str, rewritten_query: str, item_names: list[str]):
+    """持久化用户消息（修复原有参数错位：text 应为用户原始问题）。"""
     history_repository.save_message(
         session_id=session_id,
         role="user",
-        text=original_query,
+        text=message,
         rewritten_query=rewritten_query,
         item_names=item_names,
         image_urls=[]
@@ -168,10 +176,15 @@ def save_user_chat_message(session_id:str,message:str,rewritten_query:str,origin
 
 def confirm_item_name(state: QueryGraphState) -> QueryGraphState:
     session_id, original_query = validate_and_get_data(state)
-    valid_message_list:list[dict] = valid_chat_message_list(session_id=session_id)
-    result = call_llm_confirm_item_name_and_rewritten_query(valid_message_list,original_query)
-    milvus_search_result:dict[str,list[dict[str,Any]]] = milvus_hybrid_search(item_names=result.get("item_names"))
-    item_name_dict:dict[str,list[str]] = select_item_names(milvus_search_result)
-    update_query_state(item_name_dict, result.get("rewritten_query"),state)
-    save_user_chat_message(session_id,original_query,result.get("rewritten_query"),state.get("item_names"),[])
+    valid_message_list: list[dict] = valid_chat_message_list(session_id=session_id)
+    result = call_llm_confirm_item_name_and_rewritten_query(valid_message_list, original_query)
+    milvus_search_result: dict[str, list[dict[str, Any]]] = milvus_hybrid_search(item_names=result.get("item_names") or [])
+    item_name_dict: dict[str, list[str]] = select_item_names(milvus_search_result)
+    update_query_state(item_name_dict, result.get("rewritten_query"), state)
+    save_user_chat_message(
+        session_id=session_id,
+        message=original_query,
+        rewritten_query=result.get("rewritten_query"),
+        item_names=state.get("item_names", []),
+    )
     return state

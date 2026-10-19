@@ -57,7 +57,12 @@ def normalize_web_search_result(bailian_result:Any)->list[dict]:
 
 def search_by_web(state: QueryGraphState) -> QueryGraphState:
     rewritten_query:str = validate_and_get_data(state)
-    bailian_result = asyncio.run(call_bailian_mcp_server(rewritten_query))
-    web_search_docs:list[dict] = normalize_web_search_result(bailian_result)
+    # 网络异常/未配置 MCP 时自动降级：返回空联网结果，不阻断后续本地检索链路
+    try:
+        bailian_result = asyncio.run(call_bailian_mcp_server(rewritten_query))
+        web_search_docs:list[dict] = normalize_web_search_result(bailian_result)
+    except Exception as e:
+        logger.warning(f"联网搜索不可用,自动降级为仅本地知识库检索:{e}")
+        web_search_docs = []
     state["web_search_docs"] = web_search_docs
     return state

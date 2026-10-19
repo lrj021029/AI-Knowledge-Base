@@ -1,3 +1,5 @@
+from app.shared.config.common import env_bool
+
 # MinerU 模型版本配置（vlm = 视觉语言模型，适合PDF/图片高精度解析）
 MINERU_MODEL_VERSION = "vlm"
 # MinerU 任务轮询最大超时时间（单位：秒），超过则判定任务失败
@@ -31,3 +33,52 @@ MILVUS_DEFAULT_VARCHAR_MAX_LENGTH = 512
 MILVUS_CHUNK_CONTENT_MAX_LENGTH = 65535
 # Milvus 向量维度（BGE-M3 稠密向量维度）
 MILVUS_VECTOR_DIM = 1024
+
+# =========================
+# 听书业务元数据配置（新增）
+# =========================
+# 内容类型枚举（听书场景），用于元数据抽取与检索过滤
+AUDIOBOOK_CONTENT_TYPES = [
+    "有声书信息",
+    "书籍简介",
+    "作者介绍",
+    "听书笔记",
+    "推荐运营资料",
+    "用户评论摘要",
+    "常见问答",
+]
+# 书籍类别枚举
+AUDIOBOOK_CATEGORIES = ["科幻", "悬疑", "文学", "历史", "教育", "儿童", "小说", "非小说", "其他"]
+# 听书场景标签枚举
+AUDIOBOOK_SCENE_TAGS = ["通勤", "睡前", "碎片时间", "长途旅行"]
+# 元数据抽取时送入大模型的 Markdown 正文最大字符数（防止超长）
+AUDIOBOOK_META_MD_MAX_CHARS = 6000
+# 元数据抽取时送入大模型的切片数量上限
+AUDIOBOOK_META_CHUNKS_TOP_K = 8
+# 手动填写元数据是否优先于 LLM 自动抽取结果。
+# True  -> 手动填写优先（符合 SPEC 5.1 与验收标准）
+# False -> LLM 自动抽取优先（可用环境变量 AUDIOBOOK_META_MANUAL_FIRST=False 切换）
+AUDIOBOOK_META_MANUAL_FIRST = env_bool("AUDIOBOOK_META_MANUAL_FIRST", True)
+# 听书业务元数据在 Milvus 中作为动态字段（dynamic field）写入的字段名清单
+AUDIOBOOK_META_FIELDS = [
+    "content_type",
+    "book_name",
+    "author_name",
+    "entry_name",
+    "category",
+    # 类别/标签的多值全集（如「科幻|宇宙文明|悬疑」）。
+    # category 只是其中最贴合枚举的一个“主类别”，二者含义不同：
+    # category 用于展示与筛选栏，category_tags 用于“多标签召回”。
+    # 入库时包裹为「|a|b|」，查询侧用 like "%|悬疑|%" 做精确标签匹配，
+    # 避免「小说」误命中「非小说」这类子串问题。
+    "category_tags",
+    "scene_tags",
+    "audio_duration",
+    "narrator",
+    "highlights",
+    "suitable_audience",
+    "summary",
+    "source_file_name",
+    "source_path",
+    "meta_source",
+]

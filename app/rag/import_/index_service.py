@@ -8,6 +8,7 @@ from app.rag.import_.config import (
     MILVUS_DEFAULT_VARCHAR_MAX_LENGTH,
     MILVUS_VECTOR_DIM,
 )
+from app.shared.config.milvus_config import DENSE_METRIC_TYPE, SPARSE_METRIC_TYPE
 
 @step_log("validate_and_get_chunks")
 def validate_and_get_chunks(state: ImportGraphState):
@@ -47,7 +48,7 @@ def prepare_chunks_collection():
         field_name='dense_vector',
         index_type='HNSW',
         index_name='dense_vector_index',
-        metric_type='COSINE',
+        metric_type=DENSE_METRIC_TYPE,
         index_params={
             "M": 64,
             "efConstruction": 100,
@@ -57,7 +58,7 @@ def prepare_chunks_collection():
         field_name='sparse_vector',
         index_type='SPARSE_INVERTED_INDEX',
         index_name='sparse_vector_index',
-        metric_type='IP',
+        metric_type=SPARSE_METRIC_TYPE,
         index_params={'inverted_index_algo': 'SINDI'}
     )
     milvus_client.create_collection(

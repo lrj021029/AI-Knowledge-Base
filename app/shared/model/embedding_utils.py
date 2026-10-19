@@ -1,6 +1,8 @@
 """
 工具模块，负责提供 embedding 相关的辅助能力。
 """
+import threading
+
 from pymilvus.model.hybrid import BGEM3EmbeddingFunction
 
 from app.shared.config.embedding_config import embedding_config
@@ -9,6 +11,17 @@ from app.shared.runtime.logger import logger
 _DEFAULT_EMBEDDING_MODEL = "BAAI/bge-m3"
 _DEFAULT_EMBEDDING_DEVICE = "cpu"
 _bge_m3_ef: BGEM3EmbeddingFunction | None = None
+# 模型加载锁：多任务（多文件导入 / 查询与导入并发）会同时触发首次加载，
+# 并发加载同一个 fp16 模型会因显存/内存不足导致加载中断，
+# 表现为 NotImplementedError: Cannot copy out of meta tensor; no data!
+# 这里用锁保证「全局只加载一次」，其余调用方等待后复用同一实例。
+_bge_m3_lock = threading.Lock()
+# 编码锁：FlagEmbedding 每次 encode 都会调用 self.model.half()（dtype 转换），
+# 转换为原地修改参数；若两个检索分支（如 embedding 检索与 HyDE 检索）首次并发编码，
+# 一个线程正在 half() 改参数、另一个线程同时在 forward，会抛
+# RuntimeError: expected scalar type Float but found Half（服务重启后的首个复杂问题必现）。
+# 这里串行化编码调用，代价是一次只有一个编码在跑，与 MPS 单设备本身也基本等价。
+_bge_m3_encode_lock = threading.Lock()
 
 
 def get_bge_m3_ef() -> BGEM3EmbeddingFunction:
@@ -21,6 +34,18 @@ def get_bge_m3_ef() -> BGEM3EmbeddingFunction:
     if _bge_m3_ef is not None:
         logger.debug("BGE-M3模型单例已存在，直接返回实例")
         return _bge_m3_ef
+
+    # 并发保护：多个线程同时首次调用时，只允许一个真正加载，其余等待复用
+    with _bge_m3_lock:
+        if _bge_m3_ef is not None:
+            logger.debug("BGE-M3模型单例已由其他线程加载完成，直接返回实例")
+            return _bge_m3_ef
+        return _load_bge_m3_ef()
+
+
+def _load_bge_m3_ef() -> BGEM3EmbeddingFunction:
+    """真正执行模型加载（调用方需持有 _bge_m3_lock）。"""
+    global _bge_m3_ef
 
     # 从环境变量加载配置，无配置则使用默认值
     # 本地有可以使用本地地址！ 没有使用 "BAAI/bge-m3" 会自动下载！ 如果云端部署也可以使用url地址！
@@ -74,7 +99,9 @@ def generate_embeddings(texts: list[str]) -> dict[str, list]:
         # 加载BGE-M3模型单例
         model = get_bge_m3_ef()
         # 模型编码生成向量，返回dense（稠密向量）+sparse（CSR格式稀疏向量）
-        embeddings = model.encode_documents(texts)
+        # 串行化编码：避免并发编码时 half() 改 dtype 与 forward 竞争（见 _bge_m3_encode_lock）
+        with _bge_m3_encode_lock:
+            embeddings = model.encode_documents(texts)
         logger.debug(f"模型编码完成，开始解析稀疏向量格式，共{len(texts)}条")
 
         # 初始化稀疏向量处理结果，解析为字典格式（适配序列化/存储）

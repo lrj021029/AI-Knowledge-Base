@@ -15,6 +15,10 @@ class ImportGraphState(TypedDict):
     chunks:list
     item_name:str
     embedding_content:str
+    # ===== 听书业务扩展（新增） =====
+    manual_meta:dict          # 用户手动填写的元数据表单
+    audiobook_meta:dict       # 合并后的听书元数据
+    meta_source:str           # 元数据来源：llm / manual / rule
 
 graph_default_state:ImportGraphState = {
     "task_id": "",
@@ -29,6 +33,9 @@ graph_default_state:ImportGraphState = {
     "chunks": [],
     "item_name": "",
     "embedding_content": "",
+    "manual_meta": {},
+    "audiobook_meta": {},
+    "meta_source": "",
 }
 
 def create_default_state(**kwargs) -> ImportGraphState:

@@ -167,3 +167,13 @@ logs
 output
 notes
 test
+
+# 设计检查工具产物（taste-skill inspect 截图/报告）
+.taste-skill/
+.thinkrail
+SPEC.md
+
+迭代开发diff报告.md
+
+需求符合性核对报告.md
+

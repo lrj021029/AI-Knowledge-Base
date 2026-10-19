@@ -46,8 +46,24 @@ def validate_and_get_data(state:ImportGraphState) -> tuple[str,list[dict[str,Any
     return file_title,chunks
 
 
+# 部分大模型会把提示词里的“返回空字符串”理解成输出字面量（如“空字符串”“无”“NONE”），
+# 这里统一按“未识别到”处理，避免把占位文字当成真实主体名称写入向量库。
+_NULL_ITEM_NAME_TOKENS:set[str] = {
+    "", "空字符串", "空", "无", "暂无", "未知", "无法识别", "没有", "无内容",
+    "none", "null", "n/a", "na", "-", "—",
+}
+
+
+def normalize_item_name(raw:str) -> str:
+    """归一化模型输出的主体名称：去除包裹标点；空值语义统一返回空字符串。"""
+    text:str = (raw or "").strip().strip("。.、,，:：;；\"'“”‘’`【】[]()（） \n\t")
+    if text.lower() in _NULL_ITEM_NAME_TOKENS:
+        return ""
+    return text
+
+
 @step_log("call_llm_item_name_recognition")
-def call_llm_item_name_recognition(chunks:list[dict[str,Any]],file_title:str) -> str:
+def call_llm_item_name_recognition(chunks:list[dict[str,Any]],file_title:str,fallback_item_name:str="") -> str:
     #  2.1 加载模型的客户端对象(llm/providers)
     llm_client = llm_provider.chat(json_model=False)
     # 2.2 加载提示词和封装提示词Message对象
@@ -63,11 +79,14 @@ def call_llm_item_name_recognition(chunks:list[dict[str,Any]],file_title:str) ->
     # 2.3 定义调用链chain对象  = 模型 | 输出结果处理器对象
     chains = llm_client | StrOutputParser()
     # 2.4 执行调用链获取结果
-    item_name:str = chains.invoke([message])
-    # 2.5 执行结果判断,为空,使用file_title进行数据兜底
+    raw_item_name:str = chains.invoke([message])
+    # 2.5 归一化：模型常把提示词里的“返回空字符串”理解为输出字面量（“空字符串”/“无”/“NONE”），
+    #     需要按“未识别到”处理；无法识别时优先用书籍主体名兜底，其次用文件名兜底。
+    item_name:str = normalize_item_name(raw_item_name)
     if not item_name:
-        logger.warning(f"没有识别到item_name,给与了file_title对应的默认值:{file_title}")
-        item_name = file_title
+        fallback:str = (fallback_item_name or "").strip() or file_title
+        logger.warning(f"未识别到有效item_name(模型原始输出:{raw_item_name!r}),兜底使用:{fallback}")
+        item_name = fallback
     # 2.6 返回结果
     return item_name
 
@@ -199,8 +218,11 @@ def improve_chunks_item_name(chunks,item_name):
 def recognize_and_index_item_name(state: ImportGraphState) -> ImportGraphState:
     # 1. 获取数据和校验
     file_title,chunks = validate_and_get_data(state)
+    # 1.1 听书场景：优先用元数据抽取出的书名作为主体名称兜底（item_name 语义即“主体名称/书名”）
+    audiobook_meta:dict[str,Any] = state.get("audiobook_meta") or {}
+    book_name:str = (audiobook_meta.get("book_name") or "").strip()
     # 2. 调用模型识别item_name
-    item_name:str = call_llm_item_name_recognition(chunks,file_title)
+    item_name:str = call_llm_item_name_recognition(chunks,file_title,fallback_item_name=book_name)
     # 3. item_name进行向量化
     dense_vector,sparse_vector = item_name_embedding(item_name)
     # 4. 准备存储item_name的集合

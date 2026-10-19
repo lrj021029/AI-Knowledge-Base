@@ -30,6 +30,17 @@ class QueryGraphState(TypedDict):
     history: list  # 历史对话记录
     is_stream: bool  # 是否流式输出标记
     image_urls: List[str]  # 答案中引用的图片链接
+    has_item_names: bool  # 是否识别到主体（用于控制是否生成答案）
+
+    # ===== 听书业务扩展（新增） =====
+    intent: str  # 意图：book_recommend / book_detail / note_search / general_qa
+    book_name: str  # 目标书名
+    category: str  # 类别过滤
+    scene_tags: List[str]  # 场景标签过滤
+    content_types: List[str]  # 内容类型过滤
+    filter_expr: str  # Milvus 元数据过滤表达式
+    citations: list  # 溯源信息（书名/作者/内容类型/来源文件名）
+    structured_result: dict  # 结构化业务结果（推荐/详情）
 
 
 # ========================
@@ -49,7 +60,16 @@ query_graph_default_state: QueryGraphState = {
     "rewritten_query": "",
     "history": [],
     "is_stream": False,
-    "image_urls": []
+    "image_urls": [],
+    "has_item_names": False,
+    "intent": "",
+    "book_name": "",
+    "category": "",
+    "scene_tags": [],
+    "content_types": [],
+    "filter_expr": "",
+    "citations": [],
+    "structured_result": {},
 }
 
 

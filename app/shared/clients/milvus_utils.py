@@ -2,7 +2,11 @@
 工具模块，负责提供 milvus 相关的辅助能力。
 """
 from pymilvus import MilvusClient, AnnSearchRequest, WeightedRanker
-from app.shared.config.milvus_config import milvus_config
+from app.shared.config.milvus_config import (
+    DENSE_METRIC_TYPE,
+    SPARSE_METRIC_TYPE,
+    milvus_config,
+)
 from app.shared.runtime.logger import logger
 
 # 全局Milvus客户端实例，实现单例复用
@@ -46,12 +50,13 @@ def create_hybrid_search_requests(dense_vector, sparse_vector, dense_params=None
     :param limit: 单向量搜索返回结果数量，默认5
     :return: 搜索请求列表，包含[dense_req, sparse_req]
     """
-    # 稠密向量默认搜索参数：余弦相似度（COSINE），适配BGE-M3稠密向量并与建库参数保持一致
+    # 稠密向量默认搜索参数：与建库保持一致（默认 COSINE，可用 MILVUS_DENSE_METRIC_TYPE 覆盖）
+    # 修复原有缺陷：此前默认写死 IP，与建库的 COSINE 不一致，Milvus 会报 metric type not match
     if dense_params is None:
-        dense_params = {"metric_type": "IP"}
+        dense_params = {"metric_type": DENSE_METRIC_TYPE}
     # 稀疏向量默认搜索参数：内积（IP），适配BGE-M3稀疏向量
     if sparse_params is None:
-        sparse_params = {"metric_type": "IP"}
+        sparse_params = {"metric_type": SPARSE_METRIC_TYPE}
 
     # 构建稠密向量搜索请求，关联Milvus的dense_vector字段 近似最近邻（ANN）检索请求的核心类
     dense_req = AnnSearchRequest(

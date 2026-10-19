@@ -28,7 +28,7 @@ def validates_and_get_data(state:ImportGraphState) -> tuple[str,Path,Path]:
         raise FileNotFoundError(f"md_path地址{md_path},但是没有对应的文件，业务终止")
     # 使用md_path对象读取md_content,更新state
     md_content:str = md_path_obj.read_text(encoding="utf-8")
-    state["md_path"] = md_content
+    state["md_content"] = md_content
     # md_path_obj可以获取images path地址
     images_path_obj:Path = md_path_obj.parent / "images"
     return md_content, md_path_obj, images_path_obj
@@ -185,7 +185,8 @@ def enrich_markdown_images(state: ImportGraphState) -> ImportGraphState:
     """md 图片处理"""
     # 获取参数并校验
     md_content, md_path_obj,images_path_obj = validates_and_get_data(state)
-    if not list(images_path_obj.iterdir()):
+    # 修复原有缺陷：直接上传 .md 时不存在 images 目录，此处需容错（原先会抛 FileNotFoundError）
+    if not images_path_obj.is_dir() or not list(images_path_obj.iterdir()):
         logger.info("文件中不包含图片，跳转至下一节点")
         return state
     # 图片信息识别

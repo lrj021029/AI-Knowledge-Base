@@ -216,6 +216,61 @@ def get_recent_messages(session_id: str, limit: int = 10) -> list[dict[str, Any]
         return []
 
 
+def list_sessions(limit: int = 30) -> list[dict[str, Any]]:
+    """
+    列出最近活跃的会话，供前端「历史会话」列表使用。
+
+    说明：会话 id 由前端生成（localStorage），所以界面上必须有一份「会话清单」，
+    否则换个浏览器/清掉 localStorage 就再也找不到旧对话——数据还在 Mongo 里，但界面不可达。
+
+    :param limit: 最多返回多少个会话（按最后一条消息时间倒序）
+    :return: [{session_id, title, count, last_ts}]；title 取该会话的第一条用户提问
+    """
+    mongo_tool = get_history_mongo_tool()
+    try:
+        pipeline = [
+            # 过滤掉 session_id 为空的脏数据
+            {"$match": {"session_id": {"$nin": [None, ""]}}},
+            {"$group": {
+                "_id": "$session_id",
+                "count": {"$sum": 1},
+                "last_ts": {"$max": "$ts"},
+            }},
+            {"$sort": {"last_ts": -1}},
+            {"$limit": limit},
+        ]
+        rows = list(mongo_tool.chat_message.aggregate(pipeline))
+        if not rows:
+            return []
+
+        # 一次查出这些会话里所有用户消息，再在内存里取每个会话的第一条作为标题
+        # （比用 $push 把整段对话都读出来省内存）
+        session_ids = [row["_id"] for row in rows]
+        first_user_text: dict[str, str] = {}
+        cursor = mongo_tool.chat_message.find(
+            {"session_id": {"$in": session_ids}, "role": "user"},
+            {"session_id": 1, "text": 1, "ts": 1},
+        ).sort([("ts", 1)])
+        for doc in cursor:
+            first_user_text.setdefault(doc.get("session_id"), doc.get("text") or "")
+
+        sessions: list[dict[str, Any]] = []
+        for row in rows:
+            title = " ".join((first_user_text.get(row["_id"]) or "").split())
+            if len(title) > 60:
+                title = title[:60] + "…"
+            sessions.append({
+                "session_id": row["_id"],
+                "title": title or "未命名对话",
+                "count": int(row.get("count") or 0),
+                "last_ts": float(row.get("last_ts") or 0),
+            })
+        return sessions
+    except Exception as e:
+        logger.error(f"Error listing sessions: {e}")
+        return []
+
+
 # 主程序入口：仅当直接运行该脚本时执行，用于简单的功能测试
 if __name__ == "__main__":
     # 简单测试代码：验证数据库的写入和查询功能是否正常
